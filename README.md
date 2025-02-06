@@ -6,7 +6,7 @@
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/go.rtnl.ai/ulid)
 [![Apache 2 licensed](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/oklog/ulid/master/LICENSE)
 
-This go module is a derivative work of [github.com/oklog/ulid](https://github.com/oklog/ulid), created under the terms of the [Apache 2](LICENSE). We created this port of the original package because we found ourselves wrapping the package with helper functionality that didn't seem useful to anyone but us. This package is intended for a Rotational audience; if you need ULIDs we do recommend that you use the original package.
+This go module is a derivative work of [github.com/oklog/ulid](https://github.com/oklog/ulid), created under the terms of the [Apache 2](LICENSE) license. We created this port of the original package because we found ourselves wrapping the package with helper functionality that didn't seem useful to anyone but us. This package is intended for a Rotational audience; if you need ULIDs we do recommend that you use the original package.
 
 ## Install
 
