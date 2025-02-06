@@ -101,13 +101,28 @@ func MustNewDefault(t time.Time) ULID {
 	return MustNew(Timestamp(t), defaultEntropy)
 }
 
+// MustNewSecure is a convenience function equivalent to MustNew with
+// SecureEntropy as the entropy. It may panic if the given time.Time is too
+// large or too small.
+func MustNewSecure(t time.Time) ULID {
+	return MustNew(Timestamp(t), secureEntropy)
+}
+
 // Make returns a ULID with the current time in Unix milliseconds and
 // monotonically increasing entropy for the same millisecond.
-// It is safe for concurrent use, leveraging a sync.Pool underneath for minimal
-// contention.
+// It is safe for concurrent use, using a sync.Mutex to protect entropy access.
 func Make() (id ULID) {
 	// NOTE: MustNew can't panic since DefaultEntropy never returns an error.
 	return MustNew(Now(), defaultEntropy)
+}
+
+// MakeSecure returns a ULID with the current time in Unix milliseconds and a
+// cryptographically secure, monotonically increasing entropy for the same
+// millisecond. It is safe for concurrent use, leveraging a sync.Pool underneath
+// for minimal contention.
+func MakeSecure() (id ULID) {
+	// NOTE: MustNew can't panic since SecureEntropy never returns an error.
+	return MustNew(Now(), secureEntropy)
 }
 
 //===========================================================================
@@ -119,8 +134,22 @@ func Make() (id ULID) {
 // ErrDataSize is returned if the len(ulid) is different from an encoded
 // ULID's length. Invalid encodings produce undefined ULIDs. For a version that
 // returns an error instead, see ParseStrict.
-func Parse(ulid string) (id ULID, err error) {
-	return id, parse([]byte(ulid), false, &id)
+func Parse(ulid any) (id ULID, err error) {
+	switch t := ulid.(type) {
+	case ULID:
+		return t, nil
+	case string:
+		if t == "" {
+			return Zero, nil
+		}
+		return id, parse([]byte(t), false, &id)
+	case []byte:
+		return id, id.UnmarshalBinary(t)
+	case [16]byte:
+		return ULID(t), nil
+	default:
+		return Zero, ErrUnknownType
+	}
 }
 
 // ParseStrict parses an encoded ULID, returning an error in case of failure.
@@ -130,8 +159,19 @@ func Parse(ulid string) (id ULID, err error) {
 //
 // ErrDataSize is returned if the len(ulid) is different from an encoded
 // ULID's length. Invalid encodings return ErrInvalidCharacters.
-func ParseStrict(ulid string) (id ULID, err error) {
-	return id, parse([]byte(ulid), true, &id)
+func ParseStrict(ulid any) (id ULID, err error) {
+	switch t := ulid.(type) {
+	case ULID:
+		return t, nil
+	case string:
+		return id, parse([]byte(t), true, &id)
+	case []byte:
+		return id, id.UnmarshalBinary(t)
+	case [16]byte:
+		return id, id.UnmarshalBinary(t[:])
+	default:
+		return Zero, ErrUnknownType
+	}
 }
 
 func parse(v []byte, strict bool, id *ULID) error {
@@ -209,9 +249,9 @@ func parse(v []byte, strict bool, id *ULID) error {
 
 // MustParse is a convenience function equivalent to Parse that panics on failure
 // instead of returning an error.
-func MustParse(ulid string) ULID {
-	id, err := Parse(ulid)
-	if err != nil {
+func MustParse(ulid any) (id ULID) {
+	var err error
+	if id, err = Parse(ulid); err != nil {
 		panic(err)
 	}
 	return id
@@ -219,9 +259,9 @@ func MustParse(ulid string) ULID {
 
 // MustParseStrict is a convenience function equivalent to ParseStrict that
 // panics on failure instead of returning an error.
-func MustParseStrict(ulid string) ULID {
-	id, err := ParseStrict(ulid)
-	if err != nil {
+func MustParseStrict(ulid any) (id ULID) {
+	var err error
+	if id, err = ParseStrict(ulid); err != nil {
 		panic(err)
 	}
 	return id

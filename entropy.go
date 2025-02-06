@@ -2,6 +2,7 @@ package ulid
 
 import (
 	"bufio"
+	crand "crypto/rand"
 	"encoding/binary"
 	"io"
 	"math"
@@ -10,6 +11,10 @@ import (
 	"sync"
 	"time"
 )
+
+//===========================================================================
+// Default Entropy
+//===========================================================================
 
 var defaultEntropy = func() io.Reader {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -21,6 +26,62 @@ var defaultEntropy = func() io.Reader {
 func DefaultEntropy() io.Reader {
 	return defaultEntropy
 }
+
+//===========================================================================
+// Secure Entropy
+//===========================================================================
+
+var secureEntropy = func() io.Reader {
+	return Pool(func() io.Reader { return crand.Reader })
+}()
+
+// SecureEntropy returns a thread-safe per process monotonically increasing
+// entropy source that uses cryptographically random generation and a sync.Pool
+func SecureEntropy() io.Reader {
+	return secureEntropy
+}
+
+//===========================================================================
+// Pool Entropy
+//===========================================================================
+
+// Provides a thread-safe source of entropy to assist with fast, concurrent access
+// to random data generation. Specify the type of entropy to use
+
+type PoolEntropy struct {
+	sync.Pool
+}
+
+type MakeEntropy func() io.Reader
+
+var _ io.Reader = &PoolEntropy{}
+
+func Pool(entropy MakeEntropy) *PoolEntropy {
+	return &PoolEntropy{
+		Pool: sync.Pool{
+			New: func() any { return entropy() },
+		},
+	}
+}
+
+func (e *PoolEntropy) Read(p []byte) (n int, err error) {
+	r := e.Pool.Get().(io.Reader)
+	n, err = r.Read(p)
+	e.Pool.Put(r)
+	return n, err
+}
+
+func (e *PoolEntropy) Get() io.Reader {
+	return e.Pool.Get().(io.Reader)
+}
+
+func (e *PoolEntropy) Put(r io.Reader) {
+	e.Pool.Put(r)
+}
+
+//===========================================================================
+// Monotonic Readers
+//===========================================================================
 
 // MonotonicReader is an interface that should yield monotonically increasing
 // entropy into the provided slice for all calls with the same ms parameter. If
