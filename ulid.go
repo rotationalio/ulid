@@ -110,7 +110,7 @@ func MustNewSecure(t time.Time) ULID {
 
 // Make returns a ULID with the current time in Unix milliseconds and
 // monotonically increasing entropy for the same millisecond.
-// It is safe for concurrent use, using a sync.Mutex to protect entropy access.
+// It is safe for concurrent use, using a sync.Pool to minimize contention.
 func Make() (id ULID) {
 	// NOTE: MustNew can't panic since DefaultEntropy never returns an error.
 	return MustNew(Now(), defaultEntropy)

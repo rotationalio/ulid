@@ -368,6 +368,8 @@ func TestParseRobustness(t *testing.T) {
 }
 
 func TestParseTypes(t *testing.T) {
+	t.Parallel()
+
 	example := ulid.Make()
 	testCases := []struct {
 		input    any
