@@ -97,12 +97,36 @@ func TestMustNewDefault(t *testing.T) {
 	})
 }
 
+func TestMustNewSecure(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ULID", func(t *testing.T) {
+		id := ulid.MustNewSecure(time.Now())
+		rt, err := ulid.Parse(id.String())
+		if err != nil {
+			t.Fatalf("parse %q: %v", id.String(), err)
+		}
+		if id != rt {
+			t.Fatalf("%q != %q", id.String(), rt.String())
+		}
+	})
+
+	t.Run("Panic", func(t *testing.T) {
+		defer func() {
+			if got, want := recover(), ulid.ErrBigTime; got != want {
+				t.Errorf("got panic %v, want %v", got, want)
+			}
+		}()
+		_ = ulid.MustNewSecure(time.Time{})
+	})
+}
+
 func TestMustParse(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		name string
-		fn   func(string) ulid.ULID
+		fn   func(any) ulid.ULID
 	}{
 		{"MustParse", ulid.MustParse},
 		{"MustParseStrict", ulid.MustParseStrict},
@@ -113,7 +137,7 @@ func TestMustParse(t *testing.T) {
 					t.Errorf("got panic %v, want %v", got, want)
 				}
 			}()
-			_ = tc.fn("")
+			_ = tc.fn("abc")
 		})
 
 	}
@@ -340,6 +364,44 @@ func TestParseRobustness(t *testing.T) {
 	err := quick.Check(prop, &quick.Config{MaxCount: 1e4})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestParseTypes(t *testing.T) {
+	example := ulid.Make()
+	testCases := []struct {
+		input    any
+		expected ulid.ULID
+		err      error
+	}{
+		{example.String(), example, nil},
+		{example.Bytes(), example, nil},
+		{example, example, nil},
+		{[16]byte(example), example, nil},
+		{"", ulid.Null, nil},
+		{uint64(14), ulid.Null, ulid.ErrUnknownType},
+		{"foo", ulid.Null, ulid.ErrDataSize},
+		{[]byte{0x14, 0x21}, ulid.Null, ulid.ErrDataSize},
+		{ulid.Null.String(), ulid.Null, nil},
+	}
+
+	for i, tc := range testCases {
+		actual, err := ulid.Parse(tc.input)
+		if err != tc.err {
+			t.Fatalf("could not compare error on test case %d: got %v want %v", i, err, tc.err)
+		}
+
+		if actual.Compare(tc.expected) != 0 {
+			t.Fatalf("expected result not returned: got %v want %v", actual, tc.expected)
+		}
+
+		if tc.err != nil {
+			testPanics(t, tc.err, func() { ulid.MustParse(tc.input) })
+		} else {
+			if tc.expected.Compare(ulid.MustParse(tc.input)) != 0 {
+				t.Errorf("expected result not returned: got %v want %v", actual, tc.expected)
+			}
+		}
 	}
 }
 
@@ -788,4 +850,13 @@ func BenchmarkCompare(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = id.Compare(other)
 	}
+}
+
+func testPanics(t *testing.T, err any, f func()) {
+	defer func() {
+		if got, want := recover(), err; got != want {
+			t.Errorf("panic with err %v, want %v", got, want)
+		}
+	}()
+	f()
 }

@@ -81,7 +81,69 @@ the documentation for details.
 
 ## CLI Tool
 
-Coming Soon!
+The CLI tool helps debug and generate ULIDs for your development workflow. Install the CLI using `go` as follows:
+
+```shell
+go install go.rtnl.ai/ulid/cmd/ulid@latest
+```
+
+Usage:
+
+```shell
+Rotational ULID debugging utility
+Usage: generate or inspect a ULID
+
+Generate:
+
+    ulid [options]
+
+    -n INT, --num INT     number of ULIDs to generate
+    -q, --quick           use quick entropy (not cryptographic)
+    -m, --mono            use monotonic entropy (for more than one ULID)
+    -z, --zero            use zero entropy
+
+Inspect:
+
+    ulid [options] ULID [ULID ...]
+
+    -f, --format string   time format (default, rfc3339, unix, ms)
+    -l, --local           use local time instead of UTC
+    -p, --path            assumes argument is a path with a ULID filename (strips directory and extension)
+
+Options:
+
+    -h, --help            display this help and exit
+```
+
+Examples:
+
+```
+$ ulid
+01JKEHMRSH3HXYCYYZ1HZR2JBS
+```
+
+```
+$ ulid -n 3 -mono
+01JKEHNQPA0END3NHMFKB2Y6SE
+01JKEHNQPA0END3NHMFNPBB9WE
+01JKEHNQPA0END3NHMFRMCX384
+```
+
+```
+$ ulid 01JKEHNQPA0END3NHMFKB2Y6SE
+Thu Feb 06 21:11:53.29 UTC 2025
+```
+
+```
+$ ulid -f rfc3339 --local 01JKEHNQPA0END3NHMFKB2Y6SE 01JKEHNQPA0END3NHMFNPBB9WE
+2025-02-06T15:11:53.290-06:00
+2025-02-06T15:11:53.290-06:00
+```
+
+```
+$ ulid --path path/to/01JKEHNQPA0END3NHMFKB2Y6SE.json
+Thu Feb 06 21:11:53.29 UTC 2025
+```
 
 ## Background
 
@@ -173,41 +235,55 @@ goos: darwin
 goarch: arm64
 pkg: go.rtnl.ai/ulid
 cpu: Apple M1 Max
-BenchmarkNew/WithCrypoEntropy-10         	 9962818	       109.0 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithEntropy-10              	39486076	        33.55 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithMonotonicEntropy_SameTimestamp_Inc0-10         	39891241	        29.24 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithMonotonicEntropy_DifferentTimestamp_Inc0-10    	32685003	        36.05 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithMonotonicEntropy_SameTimestamp_Inc1-10         	45091450	        25.16 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithMonotonicEntropy_DifferentTimestamp_Inc1-10    	34196192	        35.31 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithCryptoMonotonicEntropy_SameTimestamp_Inc1-10   	47389621	        25.40 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithCrypoEntropy-10         	 9962818	      109.0 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithEntropy-10              	39486076	       33.55 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithoutEntropy-10              72576985	       16.62 ns/op	      16 B/op	       1 allocs/op
+BenchmarkMustNew/WithCrypoEntropy-10        11441258	      107.4 ns/op	      16 B/op	       1 allocs/op
+BenchmarkMustNew/WithEntropy-10             37700085	       31.30 ns/op	      16 B/op	       1 allocs/op
+BenchmarkMustNew/WithoutEntropy-10          70010307	       18.37 ns/op	      16 B/op	       1 allocs/op
+```
+
+```
+goos: darwin
+goarch: arm64
+pkg: go.rtnl.ai/ulid
+cpu: Apple M1 Max
+BenchmarkParse-10                          100000000	       10.65 ns/op	      2441.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseStrict-10                     73864335	       15.97 ns/op	      1627.67 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMustParse-10                       95626101	       12.61 ns/op	      2061.36 MB/s	       0 B/op	       0 allocs/op
+BenchmarkString-10                          86481555	       13.67 ns/op	      1170.76 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMarshal/Text-10                    94831988	       12.63 ns/op	      1266.42 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMarshal/TextTo-10                 100000000	       10.98 ns/op	      1456.62 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMarshal/Binary-10                 455631534	        2.760 ns/op	      5797.31 MB/s	       0 B/op	       0 allocs/op
+BenchmarkMarshal/BinaryTo-10              1000000000	        1.111 ns/op	      14402.78 MB/s	       0 B/op	       0 allocs/op
+BenchmarkUnmarshal/Text-10                 100000000	       10.43 ns/op	      2492.96 MB/s	       0 B/op	       0 allocs/op
+BenchmarkUnmarshal/Binary-10               569854686	        2.135 ns/op	      7493.13 MB/s	       0 B/op	       0 allocs/op
+BenchmarkNow-10                             31315614	       38.77 ns/op	       206.35 MB/s	       0 B/op	       0 allocs/op
+BenchmarkTimestamp-10                     1000000000	        0.7833 ns/op	 10212.69 MB/s	       0 B/op	       0 allocs/op
+BenchmarkTime-10                          1000000000	        0.8018 ns/op      9977.95 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSetTime-10                        950735085	        1.262 ns/op	      6338.36 MB/s	       0 B/op	       0 allocs/op
+BenchmarkEntropy-10                        574565655	        2.042 ns/op	      4896.79 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSetEntropy-10                    1000000000	        0.9536 ns/op	 10486.70 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCompare-10                        522322389	        2.254 ns/op	     14197.26 MB/s	       0 B/op	       0 allocs/op
+```
+
+```
+goos: darwin
+goarch: arm64
+pkg: go.rtnl.ai/ulid
+cpu: Apple M1 Max
+BenchmarkNew/WithMonotonicEntropy_SameTimestamp_Inc0-10         	        39891241	        29.24 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithMonotonicEntropy_DifferentTimestamp_Inc0-10    	        32685003	        36.05 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithMonotonicEntropy_SameTimestamp_Inc1-10         	        45091450	        25.16 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithMonotonicEntropy_DifferentTimestamp_Inc1-10    	        34196192	        35.31 ns/op	      16 B/op	       1 allocs/op
+BenchmarkNew/WithCryptoMonotonicEntropy_SameTimestamp_Inc1-10   	        47389621	        25.40 ns/op	      16 B/op	       1 allocs/op
 BenchmarkNew/WithCryptoMonotonicEntropy_DifferentTimestamp_Inc1-10         	39461244	        30.50 ns/op	      16 B/op	       1 allocs/op
-BenchmarkNew/WithoutEntropy-10                                             	72576985	        16.62 ns/op	      16 B/op	       1 allocs/op
-BenchmarkMustNew/WithCrypoEntropy-10                                       	11441258	       107.4 ns/op	      16 B/op	       1 allocs/op
-BenchmarkMustNew/WithEntropy-10                                            	37700085	        31.30 ns/op	      16 B/op	       1 allocs/op
 BenchmarkMustNew/WithMonotonicEntropy_SameTimestamp_Inc0-10                	41440399	        29.14 ns/op	      16 B/op	       1 allocs/op
 BenchmarkMustNew/WithMonotonicEntropy_DifferentTimestamp_Inc0-10           	32740442	        36.39 ns/op	      16 B/op	       1 allocs/op
 BenchmarkMustNew/WithMonotonicEntropy_SameTimestamp_Inc1-10                	46801796	        26.14 ns/op	      16 B/op	       1 allocs/op
 BenchmarkMustNew/WithMonotonicEntropy_DifferentTimestamp_Inc1-10           	32244736	        37.13 ns/op	      16 B/op	       1 allocs/op
 BenchmarkMustNew/WithCryptoMonotonicEntropy_SameTimestamp_Inc1-10          	45454687	        26.91 ns/op	      16 B/op	       1 allocs/op
 BenchmarkMustNew/WithCryptoMonotonicEntropy_DifferentTimestamp_Inc1-10     	36388584	        33.81 ns/op	      16 B/op	       1 allocs/op
-BenchmarkMustNew/WithoutEntropy-10                                         	70010307	        18.37 ns/op	      16 B/op	       1 allocs/op
-BenchmarkParse-10                                                          	100000000	        10.65 ns/op	2441.46 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseStrict-10                                                    	73864335	        15.97 ns/op	1627.67 MB/s	       0 B/op	       0 allocs/op
-BenchmarkMustParse-10                                                      	95626101	        12.61 ns/op	2061.36 MB/s	       0 B/op	       0 allocs/op
-BenchmarkString-10                                                         	86481555	        13.67 ns/op	1170.76 MB/s	       0 B/op	       0 allocs/op
-BenchmarkMarshal/Text-10                                                   	94831988	        12.63 ns/op	1266.42 MB/s	       0 B/op	       0 allocs/op
-BenchmarkMarshal/TextTo-10                                                 	100000000	        10.98 ns/op	1456.62 MB/s	       0 B/op	       0 allocs/op
-BenchmarkMarshal/Binary-10                                                 	455631534	         2.760 ns/op	5797.31 MB/s	       0 B/op	       0 allocs/op
-BenchmarkMarshal/BinaryTo-10                                               	1000000000	         1.111 ns/op	14402.78 MB/s	       0 B/op	       0 allocs/op
-BenchmarkUnmarshal/Text-10                                                 	100000000	        10.43 ns/op	2492.96 MB/s	       0 B/op	       0 allocs/op
-BenchmarkUnmarshal/Binary-10                                               	569854686	         2.135 ns/op	7493.13 MB/s	       0 B/op	       0 allocs/op
-BenchmarkNow-10                                                            	31315614	        38.77 ns/op	 206.35 MB/s	       0 B/op	       0 allocs/op
-BenchmarkTimestamp-10                                                      	1000000000	         0.7833 ns/op	10212.69 MB/s	       0 B/op	       0 allocs/op
-BenchmarkTime-10                                                           	1000000000	         0.8018 ns/op	9977.95 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSetTime-10                                                        	950735085	         1.262 ns/op	6338.36 MB/s	       0 B/op	       0 allocs/op
-BenchmarkEntropy-10                                                        	574565655	         2.042 ns/op	4896.79 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSetEntropy-10                                                     	1000000000	         0.9536 ns/op	10486.70 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCompare-10                                                        	522322389	         2.254 ns/op	14197.26 MB/s	       0 B/op	       0 allocs/op
 ```
 
 ## References

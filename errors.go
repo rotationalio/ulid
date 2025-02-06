@@ -3,6 +3,9 @@ package ulid
 import "errors"
 
 var (
+	// Occurs when parsing or unmarshaling ULIDs that aren't strings or []byte.
+	ErrUnknownType = errors.New("ulid: cannot parse unknown type")
+
 	// Occurs when parsing or unmarshaling ULIDs with the wrong number of bytes.
 	ErrDataSize = errors.New("ulid: bad data size when unmarshaling")
 

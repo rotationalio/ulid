@@ -7,11 +7,36 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
 	"go.rtnl.ai/ulid"
 )
+
+func TestPoolEntropy(t *testing.T) {
+	wg := sync.WaitGroup{}
+	entropy := ulid.Pool(func() io.Reader { return rand.New(rand.NewSource(time.Now().UnixNano())) })
+
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 128; i++ {
+				uu, err := ulid.New(ulid.Now(), entropy)
+				if err != nil {
+					t.Errorf("could not create ulid: %s", err)
+				}
+
+				if uu.IsZero() {
+					t.Error("expected ulid to not be null")
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+}
 
 func TestMonotonic(t *testing.T) {
 	now := ulid.Now()
