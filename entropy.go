@@ -33,7 +33,11 @@ func DefaultEntropy() io.Reader {
 // Secure Entropy
 //===========================================================================
 
-var secureEntropy = crand.Reader
+var secureEntropy = func() io.Reader {
+	return Pool(func() io.Reader {
+		return Monotonic(crand.Reader, 0)
+	})
+}()
 
 // SecureEntropy returns a thread-safe per process monotonically increasing
 // entropy source that uses cryptographically random generation and a sync.Pool
