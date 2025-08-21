@@ -97,8 +97,13 @@ func TestMustNewDefault(t *testing.T) {
 	})
 
 	t.Run("Monotonic", func(t *testing.T) {
+		nruns := 256
+		if testing.Short() {
+			nruns = 16
+		}
+
 		var prev ulid.ULID
-		for range 10 {
+		for range nruns {
 			next := ulid.MustNewDefault(time.Unix(1755789542, 0))
 			if prev.Compare(next) >= 0 {
 				t.Fatalf("prev: %v %v > next: %v %v",
@@ -130,6 +135,23 @@ func TestMustNewSecure(t *testing.T) {
 			}
 		}()
 		_ = ulid.MustNewSecure(time.Time{})
+	})
+
+	t.Run("Monotonic", func(t *testing.T) {
+		nruns := 256
+		if testing.Short() {
+			nruns = 16
+		}
+
+		var prev ulid.ULID
+		for range nruns {
+			next := ulid.MustNewSecure(time.Unix(1755789542, 0))
+			if prev.Compare(next) >= 0 {
+				t.Fatalf("prev: %v %v > next: %v %v",
+					prev.Time(), prev.Entropy(), next.Time(), next.Entropy())
+			}
+			prev = next
+		}
 	})
 }
 

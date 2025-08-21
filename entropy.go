@@ -17,9 +17,9 @@ import (
 //===========================================================================
 
 var defaultEntropy = func() io.Reader {
-	return Pool(func() io.Reader {
-		return Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
-	})
+	return &LockedMonotonicReader{
+		MonotonicReader: Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0),
+	}
 }()
 
 // DefaultEntropy returns a thread-safe per process monotonically increasing
@@ -34,9 +34,9 @@ func DefaultEntropy() io.Reader {
 //===========================================================================
 
 var secureEntropy = func() io.Reader {
-	return Pool(func() io.Reader {
-		return Monotonic(crand.Reader, 0)
-	})
+	return &LockedMonotonicReader{
+		MonotonicReader: Monotonic(crand.Reader, 0),
+	}
 }()
 
 // SecureEntropy returns a thread-safe per process monotonically increasing
