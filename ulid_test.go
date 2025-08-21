@@ -95,6 +95,18 @@ func TestMustNewDefault(t *testing.T) {
 		}()
 		_ = ulid.MustNewDefault(time.Time{})
 	})
+
+	t.Run("Monotonic", func(t *testing.T) {
+		var prev ulid.ULID
+		for range 10 {
+			next := ulid.MustNewDefault(time.Unix(1755789542, 0))
+			if prev.Compare(next) >= 0 {
+				t.Fatalf("prev: %v %v > next: %v %v",
+					prev.Time(), prev.Entropy(), next.Time(), next.Entropy())
+			}
+			prev = next
+		}
+	})
 }
 
 func TestMustNewSecure(t *testing.T) {
