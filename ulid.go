@@ -469,6 +469,7 @@ func (id *ULID) Scan(src interface{}) error {
 			}
 
 			// Otherwise return the original error.
+			*id = Zero
 			return err
 		}
 		return nil
@@ -485,6 +486,7 @@ func (id *ULID) Scan(src interface{}) error {
 			}
 
 			// Otherwise return the original error.
+			*id = Zero
 			return err
 		}
 		return nil

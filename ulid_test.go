@@ -657,6 +657,10 @@ func TestScan(t *testing.T) {
 		{"UUIDString", id.UUID(), id, nil},
 		{"UUIDUTF8Bytes", []byte(id.UUID()), id, nil},
 		{"BadBytes", []byte{0x14, 0x21}, ulid.ULID{}, ulid.ErrDataSize},
+		{"BadUUID", "00FF7396-08EA-E2C1-CA5B-B333BD09716X", ulid.ULID{}, ulid.ErrDataSize},
+		{"BadString", "foo", ulid.ULID{}, ulid.ErrDataSize},
+		{"BadUUIDBytes", []byte("00FF7396-08EA-E2C1-CA5B-B333BD09716X"), ulid.ULID{}, ulid.ErrDataSize},
+		{"BadUFTBytes", []byte("0?ZXSSC27AWB0WMPX?K6EYGJWBA"), ulid.ULID{}, ulid.ErrDataSize},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
