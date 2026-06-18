@@ -1,12 +1,15 @@
 package ulid_test
 
 import (
-	"strings"
+	"bytes"
+	"crypto/rand"
+	"errors"
 	"testing"
 
 	"go.rtnl.ai/ulid"
 )
 
+// ULID should be compatible with UUID strings.
 func TestULID_UUID(t *testing.T) {
 	// Fixtures of random ULIDs (timestamps between 2002-04-13 and 2026-07-13)
 	// paired with their expected canonical UUID string representation.
@@ -61,18 +64,92 @@ func TestULID_UUID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: UUID(%q) returned error: %v", tc.ulid, tc.uuid, err)
 		}
-		if parsed != id {
+		if !bytes.Equal(parsed[:], id[:]) {
 			t.Errorf("%s: UUID(%q) = %s, want %s", tc.ulid, tc.uuid, parsed.String(), id.String())
 		}
+	}
+}
 
-		// Parsing should also work without hyphens and with mixed case.
-		noHyphens := strings.ToUpper(strings.ReplaceAll(tc.uuid, "-", ""))
-		alt, err := ulid.UUID(noHyphens)
-		if err != nil {
-			t.Fatalf("%s: UUID(%q) returned error: %v", tc.ulid, noHyphens, err)
+func TestUUID(t *testing.T) {
+	t.Parallel()
+	expected := ulid.MustParse("00ZXSSC27AWB0WMPXK6EYGJWBA")
+
+	tf := func(s string) func(t *testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+			parsed, err := ulid.UUID(s)
+			if err != nil {
+				t.Fatalf("UUID(%q) returned error: %v", s, err)
+			}
+			if !bytes.Equal(parsed[:], expected[:]) {
+				t.Errorf("UUID(%q) = got %s, want %s", s, parsed.String(), expected.String())
+			}
 		}
-		if alt != id {
-			t.Errorf("%s: UUID(%q) = %s, want %s", tc.ulid, noHyphens, alt.String(), id.String())
+	}
+
+	t.Run("Lowercase", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Hyphens", tf("00ff7396-08ea-e2c1-ca5b-b333bd09716a"))
+		t.Run("NoHyphens", tf("00ff739608eae2c1ca5bb333bd09716a"))
+	})
+
+	t.Run("MixedCase", func(t *testing.T) {
+		t.Parallel()
+		t.Run("Hyphens", tf("00Ff7396-08Ea-E2c1-cA5b-b333Bd09716a"))
+		t.Run("NoHyphens", tf("00Ff739608EaE2c1cA5bb333Bd09716a"))
+	})
+
+	t.Run("Uppercase", func(t *testing.T) {
+		t.Parallel()
+		t.Run("Hyphens", tf("00FF7396-08EA-E2C1-CA5B-B333BD09716A"))
+		t.Run("NoHyphens", tf("00FF739608EAE2C1CA5BB333BD09716A"))
+	})
+
+	t.Run("Invalid", func(t *testing.T) {
+		t.Parallel()
+
+		tf := func(s string, err error) func(t *testing.T) {
+			return func(t *testing.T) {
+				t.Parallel()
+				_, perr := ulid.UUID(s)
+				if !errors.Is(perr, err) {
+					t.Errorf("UUID(%q) returned error: %v, want %v", s, perr, err)
+				}
+			}
+		}
+
+		t.Run("Empty", tf("", ulid.ErrInvalidUUIDLen))
+		t.Run("TooShort", tf("00FF7396-08EA-E2C1-CA5B-B333BD09716", ulid.ErrInvalidUUIDLen))
+		t.Run("TooLong", tf("00FF7396-08EA-E2C1-CA5B-CE23-B333BD09716A", ulid.ErrInvalidUUIDLen))
+		t.Run("InvalidChar", tf("00FF7396-08EA-E2C1-CA5B-B333BD09716X", ulid.ErrInvalidUUIDChar))
+	})
+}
+
+func TestUUID_Fuzz(t *testing.T) {
+	n := 1024
+	if testing.Short() {
+		n = 32
+	}
+
+	for i := 0; i < n; i++ {
+		data := make([]byte, 16)
+		if _, err := rand.Read(data); err != nil {
+			t.Fatalf("rand.Read(%d) returned error: %v", len(data), err)
+		}
+
+		uu, err := ulid.Parse(data)
+		if err != nil {
+			t.Fatalf("Parse(%v) returned error: %v", data, err)
+		}
+
+		us := uu.UUID()
+		parsed, err := ulid.UUID(us)
+		if err != nil {
+			t.Fatalf("UUID(%q) returned error: %v", us, err)
+		}
+		if !bytes.Equal(parsed[:], uu[:]) {
+			t.Errorf("UUID(%q) = got %s, want %s", us, parsed.String(), uu.String())
 		}
 	}
 }

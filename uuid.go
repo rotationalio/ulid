@@ -21,11 +21,17 @@ func (u ULID) UUID() string {
 // ULID. However, the string representations are different. This method can parse a
 // 32 character UUID string with mixed case with or without hyphens to return a valid
 // ULID data structure with the same bytes as the original UUID.
-func UUID(s string) (ULID, error) {
-	var dst [16]byte
-	hc := 0
+func UUID(s string) (uu ULID, err error) {
+	uu = ULID{}
+	if err = uu.UnmarshalUUID(s); err != nil {
+		return Zero, err
+	}
+	return uu, nil
+}
 
+func (u *ULID) UnmarshalUUID(s string) error {
 	// Parse exactly 32 hex characters, skipping over hyphens
+	hc := 0
 	for i := 0; i < len(s); i++ {
 		// Grab the next character (note it can be multi-byte)
 		ch := s[i]
@@ -35,7 +41,7 @@ func UUID(s string) (ULID, error) {
 
 		// Do not overflow the 32-hex character buffer
 		if hc >= 32 {
-			return Zero, ErrInvalidUUIDLen
+			return ErrInvalidUUIDLen
 		}
 
 		// Map character to its 4-bit nibble value (handling mixed case)
@@ -48,20 +54,20 @@ func UUID(s string) (ULID, error) {
 		case ch >= 'A' && ch <= 'F':
 			nibble = ch - 'A' + 10
 		default:
-			return Zero, ErrInvalidUUIDChar
+			return ErrInvalidUUIDChar
 		}
 
 		// Shift the existing nibble left by 4 bits and add the new nibble
 		if hc%2 == 0 {
-			dst[hc/2] = nibble << 4
+			u[hc/2] = nibble << 4
 		} else {
-			dst[hc/2] |= nibble
+			u[hc/2] |= nibble
 		}
 		hc++
 	}
 
 	if hc != 32 {
-		return Zero, ErrInvalidUUIDLen
+		return ErrInvalidUUIDLen
 	}
-	return ULID(dst), nil
+	return nil
 }
