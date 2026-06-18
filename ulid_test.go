@@ -648,10 +648,19 @@ func TestScan(t *testing.T) {
 		out  ulid.ULID
 		err  error
 	}{
-		{"string", id.String(), id, nil},
-		{"bytes", id[:], id, nil},
-		{"nil", nil, ulid.ULID{}, nil},
-		{"other", 44, ulid.ULID{}, ulid.ErrScanValue},
+		{"String", id.String(), id, nil},
+		{"Bytes", id[:], id, nil},
+		{"UTFBytes", []byte(id.String()), id, nil},
+		{"Nil", nil, ulid.ULID{}, nil},
+		{"Int", 44, ulid.ULID{}, ulid.ErrScanValue},
+		{"Bool", true, ulid.ULID{}, ulid.ErrScanValue},
+		{"UUIDString", id.UUID(), id, nil},
+		{"UUIDUTF8Bytes", []byte(id.UUID()), id, nil},
+		{"BadBytes", []byte{0x14, 0x21}, ulid.ULID{}, ulid.ErrDataSize},
+		{"BadUUID", "00FF7396-08EA-E2C1-CA5B-B333BD09716X", ulid.ULID{}, ulid.ErrDataSize},
+		{"BadString", "foo", ulid.ULID{}, ulid.ErrDataSize},
+		{"BadUUIDBytes", []byte("00FF7396-08EA-E2C1-CA5B-B333BD09716X"), ulid.ULID{}, ulid.ErrDataSize},
+		{"BadUFTBytes", []byte("0?ZXSSC27AWB0WMPX?K6EYGJWBA"), ulid.ULID{}, ulid.ErrDataSize},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {

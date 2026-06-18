@@ -453,15 +453,43 @@ func (id ULID) Equals(other ULID) bool {
 //===========================================================================
 
 // Scan implements the sql.Scanner interface. It supports scanning
-// a string or byte slice.
+// a string or byte slice. Scan attempts to handle the various types that might be
+// returned from the database, including using a UUID database type for the ULID.
 func (id *ULID) Scan(src interface{}) error {
 	switch x := src.(type) {
 	case nil:
 		return nil
 	case string:
-		return id.UnmarshalText([]byte(x))
+		// If a string is returned from the database first attempt to unmarshal text.
+		// Otherwise try to unmarshal as a UUID string for databases that have UUID fields.
+		if err := id.UnmarshalText([]byte(x)); err != nil {
+			// Attempt to unmarshal as a UUID string.
+			if perr := id.UnmarshalUUID(x); perr == nil {
+				return nil
+			}
+
+			// Otherwise return the original error.
+			*id = Zero
+			return err
+		}
+		return nil
 	case []byte:
-		return id.UnmarshalBinary(x)
+		if err := id.UnmarshalBinary(x); err != nil {
+			// Attempt to unmarshal as a UUID string.
+			if perr := id.UnmarshalUUID(string(x)); perr == nil {
+				return nil
+			}
+
+			// Attempt to unmarshal as a ULID string.
+			if perr := id.UnmarshalText(x); perr == nil {
+				return nil
+			}
+
+			// Otherwise return the original error.
+			*id = Zero
+			return err
+		}
+		return nil
 	}
 
 	return ErrScanValue

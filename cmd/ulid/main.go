@@ -125,6 +125,11 @@ func generate() {
 			os.Exit(1)
 		}
 
+		if format == "uuid" {
+			fmt.Fprintf(os.Stdout, "%s\n", id.UUID())
+			continue
+		}
+
 		fmt.Fprintf(os.Stdout, "%s\n", id)
 	}
 }
